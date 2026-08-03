@@ -111,9 +111,10 @@ def build_context(recipes) -> str:
 
 
 def generate_answer(question: str, model: str = GROQ_MODEL,
-                    variant: str = "concise", k: int = 5) -> dict:
+                    variant: str = "concise", k: int = 5,
+                    filters: dict | None = None) -> dict:
     """Full RAG: retrieve with the winning hybrid+rerank approach, then answer."""
-    recipes = hybrid_rerank_search(question, k=k)
+    recipes = hybrid_rerank_search(question, k=k, filters=filters)
     prompt = PROMPT_VARIANTS[variant].format(
         question=question, context=build_context(recipes))
     t0 = time.time()
