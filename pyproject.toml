@@ -6,6 +6,8 @@ dependencies = [
     "jupyter>=1.1.1",
     "kagglehub>=1.0.2",
     "pandas>=3.0.5",
+    "psycopg2-binary>=2.9.12",
     "pyarrow>=25.0.0",
     "python-dotenv>=1.2.2",
+    "sentence-transformers>=5.6.1",
 ]
