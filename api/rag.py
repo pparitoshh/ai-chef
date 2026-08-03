@@ -132,6 +132,8 @@ def generate_answer(question: str, model: str = GROQ_MODEL,
         "variant": variant,
         "latency_ms": round(1000 * (time.time() - t0), 1),
         "tokens": usage.total_tokens if usage else None,
+        "prompt_tokens": usage.prompt_tokens if usage else None,
+        "completion_tokens": usage.completion_tokens if usage else None,
     }
 
 

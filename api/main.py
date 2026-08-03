@@ -29,7 +29,8 @@ def recommend(req: RecommendRequest):
     conv_id = db.log_conversation(
         question=req.question, answer=out["answer"], model_used=out["model"],
         response_time_s=elapsed, relevance=relevance,
-        prompt_tokens=None, completion_tokens=None,
+        prompt_tokens=out["prompt_tokens"],
+        completion_tokens=out["completion_tokens"],
         total_tokens=out["tokens"], filters=rewritten["filters"],
     )
     return RecommendResponse(
