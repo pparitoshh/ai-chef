@@ -11,6 +11,8 @@ dependencies = [
     "psycopg2-binary>=2.9.12",
     "pyarrow>=25.0.0",
     "python-dotenv>=1.2.2",
+    "requests>=2.32.5",
     "sentence-transformers>=5.6.1",
+    "streamlit>=1.55.0",
     "uvicorn>=0.40.0",
 ]
