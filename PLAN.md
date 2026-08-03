@@ -181,8 +181,9 @@ ai-chef/
 - [x] **Phase 3 — Retrieval + eval**: ground truth via Groq; Hit Rate/MRR for
       text vs vector vs hybrid (+re-rank); pick winner → **hybrid+rerank**
       (HR@5 0.208, MRR 0.134 on 788 questions)
-- [ ] **Phase 4 — RAG + eval**: prompt templates, Groq answers, LLM-as-judge,
-      8b vs 70b comparison; pick winner
+- [x] **Phase 4 — RAG + eval**: prompt templates, Groq answers, LLM-as-judge,
+      8b vs 70b comparison; pick winner → **llama-3.1-8b-instant + detailed
+      prompt** (RELEVANT 0.82 vs 0.72/0.57/0.52, 175 judgments)
 - [ ] **Phase 5 — FastAPI**: `/recommend`, `/feedback`, `/health`; logging
 - [ ] **Phase 6 — Streamlit**: conversational flow, recipe cards, similar
       dishes, feedback buttons
@@ -222,4 +223,5 @@ GROQ_JUDGE_MODEL=llama-3.3-70b-versatile
 | 2026-08-03 | LLM | Groq free tier |
 | 2026-08-03 | Deployment | Vercel (API) — bonus phase only |
 | 2026-08-03 | Retrieval | **hybrid+rerank** wins (788 Groq questions, k=5): HR 0.208 / MRR 0.134 vs hybrid 0.184/0.108, text 0.156/0.092, vector 0.126/0.071; 83ms/query acceptable |
+| 2026-08-03 | Answer model | **llama-3.1-8b-instant + "detailed" prompt**: LLM-judge RELEVANT 0.82 (n=44) vs 70b-detailed 0.72, 70b-concise 0.57, 8b-concise 0.52; also faster (634ms) and cheaper. Prompt variant mattered more than model size |
 | — | Ingestion: script vs Prefect? | Start with script, decide at Phase 10 |
