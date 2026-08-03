@@ -1,0 +1,20 @@
+# AI Chef — Streamlit UI image
+FROM python:3.12-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+WORKDIR /app
+
+# Same dependency story as the API image (CPU-only torch, see Dockerfile).
+COPY pyproject.toml uv.lock ./
+RUN uv export --locked --no-hashes --no-emit-project -o /tmp/requirements.txt \
+ && grep -vE '^(nvidia-|triton)' /tmp/requirements.txt > /tmp/req-cpu.txt \
+ && uv venv \
+ && uv pip install --index-url https://download.pytorch.org/whl/cpu \
+      "torch==$(sed -n 's/^torch==\([0-9.]*\).*/\1/p' /tmp/requirements.txt)" \
+ && uv pip install -r /tmp/req-cpu.txt
+
+COPY streamlit_app/ ./streamlit_app/
+
+ENV PATH="/app/.venv/bin:$PATH"
+EXPOSE 8501
+CMD ["streamlit", "run", "streamlit_app/app.py", \
+     "--server.port=8501", "--server.address=0.0.0.0"]
