@@ -178,8 +178,9 @@ ai-chef/
 - [ ] **Phase 1 — Data**: download dataset, explore in notebook, derive
       `cuisine` / `dish_type` / `skill_level`, pick subset
 - [ ] **Phase 2 — Ingestion**: `ingest.py` → Postgres+pgvector; verify counts
-- [ ] **Phase 3 — Retrieval + eval**: ground truth via Groq; Hit Rate/MRR for
-      text vs vector vs hybrid (+re-rank); pick winner
+- [x] **Phase 3 — Retrieval + eval**: ground truth via Groq; Hit Rate/MRR for
+      text vs vector vs hybrid (+re-rank); pick winner → **hybrid+rerank**
+      (HR@5 0.208, MRR 0.134 on 788 questions)
 - [ ] **Phase 4 — RAG + eval**: prompt templates, Groq answers, LLM-as-judge,
       8b vs 70b comparison; pick winner
 - [ ] **Phase 5 — FastAPI**: `/recommend`, `/feedback`, `/health`; logging
@@ -220,4 +221,5 @@ GROQ_JUDGE_MODEL=llama-3.3-70b-versatile
 | 2026-08-03 | Database | PostgreSQL + pgvector (no Supabase) |
 | 2026-08-03 | LLM | Groq free tier |
 | 2026-08-03 | Deployment | Vercel (API) — bonus phase only |
+| 2026-08-03 | Retrieval | **hybrid+rerank** wins (788 Groq questions, k=5): HR 0.208 / MRR 0.134 vs hybrid 0.184/0.108, text 0.156/0.092, vector 0.126/0.071; 83ms/query acceptable |
 | — | Ingestion: script vs Prefect? | Start with script, decide at Phase 10 |

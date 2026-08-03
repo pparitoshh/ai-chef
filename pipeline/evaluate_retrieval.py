@@ -48,9 +48,10 @@ def main():
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--limit", type=int, default=None, help="debug: use only N pairs")
     parser.add_argument("--approaches", nargs="+", default=list(APPROACHES))
+    parser.add_argument("--gt", type=Path, default=GT_PATH, help="ground-truth CSV")
     args = parser.parse_args()
 
-    pairs = pd.read_csv(GT_PATH, dtype={"recipe_id": str})
+    pairs = pd.read_csv(args.gt, dtype={"recipe_id": str})
     if args.limit:
         pairs = pairs.head(args.limit)
     print(f"Evaluating {len(pairs)} questions, k={args.k}\n")
