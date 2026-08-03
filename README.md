@@ -3,7 +3,7 @@
 An AI cooking assistant that recommends dishes based on your cuisine craving,
 dish type, and culinary skill level — then walks you through the recipe.
 
-LLM Zoomcamp capstone project. **Work in progress** — see [PLAN.md](PLAN.md)
+**Work in progress** — see [PLAN.md](PLAN.md)
 for the full architecture and roadmap.
 
 ## Quick start (planned)

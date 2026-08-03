@@ -1,8 +1,9 @@
-# AI Chef — Capstone Project Plan
+# AI Chef — Project Plan
 
-LLM Zoomcamp capstone project. An AI cooking assistant that recommends dishes
+A personal AI cooking assistant that recommends dishes
 based on **cuisine**, **dish type**, and **culinary skill level**, then walks
-the user through the recipe.
+the user through the recipe. Built and maintained as a long-term personal
+project.
 
 > Status: **Planning** — this document is the single source of truth for scope
 > and architecture. Update it as decisions change.
@@ -33,23 +34,23 @@ retrieval + an LLM that presents recipes matched to the user's constraints.
 
 ## 2. Tech Stack
 
-Course stack (mirrors llm-zoomcamp modules 2–7), with only two externals:
-**Groq** (LLM) and **Vercel** (deployment).
+Fully free-tier friendly. Only two hosted externals: **Groq** (LLM) and
+**Vercel** (deployment).
 
 | Layer | Choice | Why |
 |---|---|---|
 | LLM | **Groq** (`llama-3.1-8b-instant`, judge: `llama-3.3-70b-versatile`) | Free tier, OpenAI-compatible API |
-| Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`) | Free, local — same as course module 2 |
-| Knowledge base | **PostgreSQL + pgvector** | Vector search + full-text search + monitoring DB in one container (course module 2) |
-| Retrieval | Hybrid: pgvector (semantic) + Postgres FTS (keyword), optional cross-encoder re-rank | Hybrid search = best-practice point |
-| API | **FastAPI** | Interface (2 pts) |
-| UI | **Streamlit** (chat-style flow + 👍/👎 feedback) | Interface, easy demo video |
-| Monitoring | PostgreSQL tables + **Grafana** (≥5 charts, provisioned) | Course module 5 |
-| Containerization | Docker Compose (api, streamlit, postgres, grafana) | 2 pts |
-| Ingestion | Python script → optional Prefect flow | 1–2 pts |
-| Evaluation | Jupyter notebooks (Hit Rate, MRR, LLM-as-a-judge) | Course module 4 |
-| Deployment (bonus) | FastAPI → **Vercel**, Streamlit → Streamlit Cloud, DB → Neon free tier | +2 bonus pts |
-| Package manager | `uv` | Course standard |
+| Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`) | Free, runs locally |
+| Knowledge base | **PostgreSQL + pgvector** | Vector search + full-text search + app/analytics DB in one container |
+| Retrieval | Hybrid: pgvector (semantic) + Postgres FTS (keyword), optional cross-encoder re-rank | Best of keyword + semantic matching |
+| API | **FastAPI** | Typed, async, auto-docs at `/docs` |
+| UI | **Streamlit** (chat-style flow + 👍/👎 feedback) | Fast to build, easy to demo |
+| Monitoring | PostgreSQL tables + **Grafana** (provisioned dashboards) | Track quality, cost, usage over time |
+| Containerization | Docker Compose (api, streamlit, postgres, grafana) | One-command local run |
+| Ingestion | Python script → optional Prefect flow | Simple first, automate later |
+| Evaluation | Jupyter notebooks (Hit Rate, MRR, LLM-as-a-judge) | Data-driven retrieval/model choices |
+| Deployment | FastAPI → **Vercel**, Streamlit → Streamlit Cloud, DB → Neon free tier | Free hosting for the live demo |
+| Package manager | `uv` | Fast, reproducible (`uv.lock`) |
 
 ---
 
@@ -103,29 +104,29 @@ Plan: sample a manageable subset (~10–20k recipes) covering several cuisines,
 derive structured fields, embed `name + description + ingredients`.
 
 **Ground truth for retrieval evaluation**: generate 1–2 user questions per
-sampled recipe with Groq (same approach as course module 4 / project example).
+sampled recipe with Groq.
 
 ---
 
-## 5. Components → Evaluation Criteria Map
+## 5. Feature Checklist
 
-| Criterion (max pts) | Our implementation |
+Quality bar for the project — every feature is evaluated before it ships.
+
+| Area | Implementation |
 |---|---|
-| Problem description (2) | README: problem, users, flow diagram, examples |
-| Retrieval flow (2) | pgvector knowledge base + Groq LLM, both in the flow |
-| Retrieval evaluation (2) | Compare **multiple** approaches: text-only vs vector-only vs hybrid vs hybrid+re-rank → Hit Rate + MRR, best one used in prod |
-| LLM evaluation (2) | LLM-as-a-judge (RELEVANT/PARTLY/NON_RELEVANT) comparing **2 models** (llama-3.1-8b vs llama-3.3-70b) × 2 prompt variants |
-| Interface (2) | FastAPI REST API **and** Streamlit chat UI |
-| Ingestion pipeline (1→2) | `pipeline/ingest.py` (download→clean→derive→embed→load); upgrade to Prefect flow for 2 pts |
-| Monitoring (2) | User feedback (👍/👎) **and** Grafana dashboard ≥5 charts: requests over time, relevance distribution, feedback ratio, response time p50/p95, token usage & cost, top cuisines |
-| Containerization (2) | One `docker-compose.yaml`: api + streamlit + postgres(pgvector) + grafana (auto-provisioned) |
-| Reproducibility (2) | `uv.lock`, `.env.example`, seed data / download script, step-by-step README |
-| Hybrid search (+1) | pgvector + FTS with reciprocal rank fusion |
-| Re-ranking (+1) | Cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) re-ranks top-20 → top-5 |
-| Query rewriting (+1) | Groq rewrites conversational input into an optimized search query + extracted filters |
-| Cloud deployment (+2, bonus) | FastAPI on Vercel, Streamlit on Streamlit Cloud, DB on Neon |
-
-**Target: 18 base + 3 best-practice (+2 deployment bonus).**
+| Documentation | README: problem, users, flow diagram, examples, screenshots |
+| RAG flow | pgvector knowledge base + Groq LLM, both in the flow |
+| Retrieval evaluation | Compare **multiple** approaches: text-only vs vector-only vs hybrid vs hybrid+re-rank → Hit Rate + MRR, best one used in prod |
+| LLM evaluation | LLM-as-a-judge (RELEVANT/PARTLY/NON_RELEVANT) comparing **2 models** (llama-3.1-8b vs llama-3.3-70b) × 2 prompt variants |
+| Interface | FastAPI REST API **and** Streamlit chat UI |
+| Ingestion pipeline | `pipeline/ingest.py` (download→clean→derive→embed→load); upgrade to Prefect flow later |
+| Monitoring | User feedback (👍/👎) **and** Grafana dashboard: requests over time, relevance distribution, feedback ratio, response time p50/p95, token usage & cost, top cuisines |
+| Containerization | One `docker-compose.yaml`: api + streamlit + postgres(pgvector) + grafana (auto-provisioned) |
+| Reproducibility | `uv.lock`, `.env.example`, download script, step-by-step README |
+| Hybrid search | pgvector + FTS with reciprocal rank fusion |
+| Re-ranking | Cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) re-ranks top-20 → top-5 |
+| Query rewriting | Groq rewrites conversational input into an optimized search query + extracted filters |
+| Cloud deployment | FastAPI on Vercel, Streamlit on Streamlit Cloud, DB on Neon |
 
 ---
 
