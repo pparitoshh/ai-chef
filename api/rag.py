@@ -55,10 +55,22 @@ DISH_TYPES = ("appetizer, bbq & grilling, beverage, bread & baking, breakfast, "
               "casserole, curry, dessert, one-pot, other, pasta, pizza & flatbread, "
               "rice & grains, salad, sandwich, snack, soups & stews, stir-fry")
 FILTER_KEYS = ("cuisine", "dish_type", "diet", "skill_level", "protein")
+VALID_FILTERS = {
+    "cuisine": set(CUISINES.split(", ")),
+    "dish_type": set(DISH_TYPES.split(", ")),
+    "diet": {"vegan", "vegetarian", "non-veg"},
+    "skill_level": {"beginner", "intermediate", "master_chef"},
+    "protein": {"chicken", "pork", "beef"},
+}
 
 
 def rewrite_query(user_text: str) -> dict:
-    """Conversational input → {"query": str, "filters": {...}} via Groq JSON mode."""
+    """Conversational input → {"query": str, "filters": {...}} via Groq JSON mode.
+
+    Filter values are validated against the known vocabularies — anything the
+    model hallucinates (e.g. dish_type "dinner") is dropped so it can't
+    silently filter the result set down to zero rows.
+    """
     resp = get_client().chat.completions.create(
         model=GROQ_MODEL,
         messages=[{"role": "user", "content": REWRITE_PROMPT.format(
@@ -68,7 +80,8 @@ def rewrite_query(user_text: str) -> dict:
         max_tokens=200,
     )
     data = json.loads(resp.choices[0].message.content)
-    filters = {k: data[k] for k in FILTER_KEYS if data.get(k)}
+    filters = {k: v for k in FILTER_KEYS
+               if (v := data.get(k)) and v in VALID_FILTERS[k]}
     return {"query": data.get("search_query") or user_text, "filters": filters}
 
 

@@ -184,12 +184,12 @@ ai-chef/
 - [x] **Phase 4 — RAG + eval**: prompt templates, Groq answers, LLM-as-judge,
       8b vs 70b comparison; pick winner → **llama-3.1-8b-instant + detailed
       prompt** (RELEVANT 0.82 vs 0.72/0.57/0.52, 175 judgments)
-- [ ] **Phase 5 — FastAPI**: `/recommend`, `/feedback`, `/health`; logging
-- [ ] **Phase 6 — Streamlit**: conversational flow, recipe cards, similar
+- [x] **Phase 5 — FastAPI**: `/recommend`, `/feedback`, `/health`; logging
+- [x] **Phase 6 — Streamlit**: conversational flow, recipe cards, similar
       dishes, feedback buttons
-- [ ] **Phase 7 — Monitoring**: inline judge, Grafana dashboard (≥5 charts),
+- [x] **Phase 7 — Monitoring**: inline judge, Grafana dashboard (6 charts),
       auto-provisioning
-- [ ] **Phase 8 — Docker Compose**: all 4 services, one-command start
+- [x] **Phase 8 — Docker Compose**: all 4 services, one-command start
 - [ ] **Phase 9 — Docs**: full README (problem, architecture, setup, usage,
       screenshots, evaluation summary)
 - [ ] **Phase 10 — Bonus (optional)**: Prefect ingestion flow; Vercel +

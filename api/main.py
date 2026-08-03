@@ -23,6 +23,9 @@ def recommend(req: RecommendRequest):
     t0 = time.time()
     rewritten = rag.rewrite_query(req.question)
     out = rag.generate_answer(req.question, k=req.k, filters=rewritten["filters"])
+    if not out["recipes"] and rewritten["filters"]:
+        # filters were too strict (zero matches) — retry unfiltered
+        out = rag.generate_answer(req.question, k=req.k)
     relevance = rag.judge_relevance(req.question, out["answer"])
     elapsed = time.time() - t0
 
