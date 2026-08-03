@@ -19,3 +19,6 @@ services:
 
 volumes:
   postgres_data:
+    # pre-existing volume from the phase-2 ingestion — keep the data
+    name: ai_chef_postgres_data
+    external: true
