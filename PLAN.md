@@ -23,8 +23,10 @@ thousands of options and don't account for:
 
 1. *"What do you want to eat today?"* → cuisine (Indian, Mexican, Italian, ...)
 2. *"What kind of dish?"* → dish type (one-pot, 30-min, dessert, ...)
-3. *"What's your cooking level?"* → skill (beginner / can cook / master chef)
-4. AI Chef recommends matching dishes with full recipes, plus **similar dishes**
+3. *"What protein do you eat?"* → diet (vegan / vegetarian / chicken / pork /
+   beef / I eat everything)
+4. *"What's your cooking level?"* → skill (beginner / can cook / master chef)
+5. AI Chef recommends matching dishes with full recipes, plus **similar dishes**
    the user might also like.
 
 Under the hood it's a RAG application: a recipe knowledge base + hybrid
@@ -93,15 +95,18 @@ Everything above runs from a single `docker compose up`.
 
 **Real Kaggle recipe dataset** (decided). Candidates, in order of preference:
 
-1. **Food.com — Recipes and Reviews** (~230k recipes, via `kagglehub`)
-   - Fields: name, ingredients, steps, minutes, tags, description
+1. **Food.com — RAW_recipes** (~230k recipes, Hugging Face mirror
+   `Cassiedu66/ai-blessed_raw_recipes`; Kaggle needs auth)
+   - Fields: name, minutes, tags, calories, steps, ingredients
    - Tags already contain cuisines (`indian`, `mexican`), dish types
-     (`one-pot`, `30-minutes-or-less`), and difficulty hints → derive
-     `cuisine`, `dish_type`, `skill_level` (from #steps + minutes + tags)
+     (`one-dish-meal`, `30-minutes-or-less`), diet (`vegan`, `vegetarian`,
+     `meat`) and difficulty hints (`beginner-cook`, `easy`) → derive
+     `cuisine`, `dish_type`, `skill_level`, `proteins` (chicken/pork/beef
+     detected from ingredients; vegan/vegetarian from tags)
 2. Indian Food datasets (~6–9k) — fallback / supplement for cuisine coverage
 
-Plan: sample a manageable subset (~10–20k recipes) covering several cuisines,
-derive structured fields, embed `name + description + ingredients`.
+Plan: sample a manageable subset (**10k recipes**) covering several cuisines,
+derive structured fields, embed `name + ingredients + steps`.
 
 **Ground truth for retrieval evaluation**: generate 1–2 user questions per
 sampled recipe with Groq.
@@ -207,7 +212,10 @@ GROQ_JUDGE_MODEL=llama-3.3-70b-versatile
 
 | Date | Decision | Choice |
 |---|---|---|
-| 2026-08-03 | Dataset | Real Kaggle dataset (Food.com preferred) |
+| 2026-08-03 | Dataset | Food.com RAW_recipes (231k) via HF mirror `Cassiedu66/ai-blessed_raw_recipes` (Kaggle needs auth; other HF mirrors were broken) |
+| 2026-08-03 | Sample | 10k recipes, sqrt-proportional stratified across 18 cuisines (seed 42) |
+| 2026-08-03 | Filters | cuisine + dish_type + **protein/diet** (vegan/vegetarian/chicken/pork/beef/everything) + skill_level — all derived in `pipeline/prepare_data.py` |
+| 2026-08-03 | Diet logic | tags win; else infer from ingredients (no meat → vegetarian/vegan via dairy-egg check); ~0.14% conflicts (mock meats), acceptable |
 | 2026-08-03 | Interface | FastAPI + Streamlit (no Next.js) |
 | 2026-08-03 | Database | PostgreSQL + pgvector (no Supabase) |
 | 2026-08-03 | LLM | Groq free tier |
