@@ -11,6 +11,9 @@ datasources:
     secureJsonData:
       password: ${POSTGRES_PASSWORD}
     jsonData:
+      # Grafana 12+ core postgres plugin reads the DB name from jsonData;
+      # the legacy top-level `database` field above is ignored there.
+      database: ${POSTGRES_DB}
       sslmode: disable
       postgresVersion: 1600
     isDefault: true

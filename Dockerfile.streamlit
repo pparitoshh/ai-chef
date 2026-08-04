@@ -1,17 +1,19 @@
-# AI Chef — Streamlit UI image
-FROM python:3.12-slim
+# AI Chef — Streamlit UI image (talks to the API over HTTP; no ML deps)
+
+# -- builder: resolve locked deps into a venv (uv stays in this stage) --------
+FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
-
-# Same dependency story as the API image (CPU-only torch, see Dockerfile).
 COPY pyproject.toml uv.lock ./
-RUN uv export --locked --no-hashes --no-emit-project -o /tmp/requirements.txt \
- && grep -vE '^(nvidia-|triton)' /tmp/requirements.txt > /tmp/req-cpu.txt \
+RUN uv export --locked --no-hashes --no-emit-project --only-group ui \
+      -o /tmp/requirements.txt \
  && uv venv \
- && uv pip install --index-url https://download.pytorch.org/whl/cpu \
-      "torch==$(sed -n 's/^torch==\([0-9.]*\).*/\1/p' /tmp/requirements.txt)" \
- && uv pip install -r /tmp/req-cpu.txt
+ && uv pip install --no-cache -r /tmp/requirements.txt
 
+# -- final --------------------------------------------------------------------
+FROM python:3.12-slim
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
 COPY streamlit_app/ ./streamlit_app/
 
 ENV PATH="/app/.venv/bin:$PATH"

@@ -2,17 +2,33 @@
 name = "ai-chef"
 version = "0.1.0"
 requires-python = ">=3.12"
+# API runtime — kept torch-free so the Docker image stays small; embedding and
+# re-rank inference runs on ONNX Runtime (api/onnx_models.py).
 dependencies = [
     "fastapi>=0.135.1",
     "groq>=1.6.0",
+    "numpy>=2.2.0",
+    "onnxruntime>=1.20.0",
+    "psycopg2-binary>=2.9.12",
+    "python-dotenv>=1.2.2",
+    "requests>=2.32.5",
+    "tokenizers>=0.21.0",
+    "uvicorn>=0.40.0",
+]
+
+[dependency-groups]
+# Streamlit chat UI (talks to the API over HTTP) — kept separate so its Docker
+# image doesn't inherit the API deps. Run locally: uv run --group ui streamlit ...
+ui = [
+    "python-dotenv>=1.2.2",
+    "requests>=2.32.5",
+    "streamlit>=1.55.0",
+]
+# Host-side tooling: ingestion, evaluation, notebooks (pulls in torch)
+dev = [
     "jupyter>=1.1.1",
     "kagglehub>=1.0.2",
     "pandas>=3.0.5",
-    "psycopg2-binary>=2.9.12",
     "pyarrow>=25.0.0",
-    "python-dotenv>=1.2.2",
-    "requests>=2.32.5",
     "sentence-transformers>=5.6.1",
-    "streamlit>=1.55.0",
-    "uvicorn>=0.40.0",
 ]

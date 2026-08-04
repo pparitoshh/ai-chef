@@ -1,152 +1,316 @@
 {
   "uid": "ai_chef_overview",
-  "title": "AI Chef — Overview",
-  "tags": ["ai-chef"],
+  "title": "AI Chef \u2014 Overview",
+  "tags": [
+    "ai-chef"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "type": "timeseries",
       "title": "Requests over time",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", count(*) AS requests FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", count(*) AS requests FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1 }
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "lineWidth": 1,
+            "showPoints": "always"
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "hidden" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       }
     },
     {
       "id": 2,
       "type": "piechart",
       "title": "Relevance distribution (LLM-as-judge)",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT relevance, count(*) AS value FROM conversations WHERE $__timeFilter(\"timestamp\") AND relevance IS NOT NULL GROUP BY relevance"
+          "rawSql": "SELECT relevance, count(*) AS value FROM conversations WHERE $__timeFilter(\"timestamp\") AND relevance IS NOT NULL GROUP BY relevance",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "options": {
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
         "pieType": "donut",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": true }
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": true
+        }
       }
     },
     {
       "id": 3,
       "type": "piechart",
       "title": "User feedback ratio",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
         {
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE feedback WHEN 1 THEN 'thumbs up' ELSE 'thumbs down' END AS feedback, count(*) AS value FROM feedback WHERE $__timeFilter(\"timestamp\") GROUP BY feedback"
+          "rawSql": "SELECT CASE feedback WHEN 1 THEN 'thumbs up' ELSE 'thumbs down' END AS feedback, count(*) AS value FROM feedback WHERE $__timeFilter(\"timestamp\") GROUP BY feedback",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "options": {
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
         "pieType": "pie",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": true }
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": true
+        }
       }
     },
     {
       "id": 4,
       "type": "timeseries",
       "title": "Response time p50 / p95",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
       "targets": [
         {
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", percentile_cont(0.5) WITHIN GROUP (ORDER BY response_time) AS p50, percentile_cont(0.95) WITHIN GROUP (ORDER BY response_time) AS p95 FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", percentile_cont(0.5) WITHIN GROUP (ORDER BY response_time) AS p50, percentile_cont(0.95) WITHIN GROUP (ORDER BY response_time) AS p95 FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 20 } },
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20
+          }
+        },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       }
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "Token usage & estimated cost",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
       "targets": [
         {
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", sum(total_tokens) AS tokens, sum(coalesce(prompt_tokens, 0) / 1000000.0 * CASE WHEN model_used LIKE '%70b%' THEN 0.59 ELSE 0.05 END + coalesce(completion_tokens, 0) / 1000000.0 * CASE WHEN model_used LIKE '%70b%' THEN 0.79 ELSE 0.08 END) AS cost_usd FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroup(\"timestamp\", '1h') AS \"time\", sum(total_tokens) AS tokens, sum(coalesce(prompt_tokens, 0) / 1000000.0 * CASE WHEN model_used LIKE '%70b%' THEN 0.59 ELSE 0.05 END + coalesce(completion_tokens, 0) / 1000000.0 * CASE WHEN model_used LIKE '%70b%' THEN 0.79 ELSE 0.08 END) AS cost_usd FROM conversations WHERE $__timeFilter(\"timestamp\") GROUP BY 1 ORDER BY 1",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 20 } },
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20
+          }
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "cost_usd" },
-            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+            "matcher": {
+              "id": "byName",
+              "options": "cost_usd"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
           }
         ]
       },
       "options": {
-        "legend": { "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       }
     },
     {
       "id": 6,
       "type": "bargauge",
       "title": "Top requested cuisines",
-      "datasource": { "type": "postgres", "uid": "ai_chef_postgres" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "ai_chef_postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
       "targets": [
         {
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT filters->>'cuisine' AS cuisine, count(*) AS requests FROM conversations WHERE $__timeFilter(\"timestamp\") AND filters ? 'cuisine' GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
+          "rawSql": "SELECT filters->>'cuisine' AS cuisine, count(*) AS requests FROM conversations WHERE $__timeFilter(\"timestamp\") AND filters ? 'cuisine' GROUP BY 1 ORDER BY 2 DESC LIMIT 10",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai_chef_postgres"
+          }
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "options": {
         "displayMode": "gradient",
         "orientation": "horizontal",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": true }
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": true
+        }
       }
     }
   ]

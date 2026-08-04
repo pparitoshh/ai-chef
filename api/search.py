@@ -13,6 +13,8 @@ load_dotenv()
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+# "st" (sentence-transformers, host dev) or "onnx" (Docker images, no torch)
+MODEL_BACKEND = os.getenv("MODEL_BACKEND", "st")
 CANDIDATES = 20  # per-method candidate pool before fusion / re-ranking
 RRF_K = 60  # reciprocal-rank-fusion constant
 
@@ -45,18 +47,28 @@ def get_connection():
 def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
-        from sentence_transformers import SentenceTransformer
+        if MODEL_BACKEND == "onnx":
+            from api.onnx_models import MODELS_DIR, OnnxEmbedder
 
-        _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+            _embedding_model = OnnxEmbedder(MODELS_DIR / "embedder")
+        else:
+            from sentence_transformers import SentenceTransformer
+
+            _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
     return _embedding_model
 
 
 def get_rerank_model():
     global _rerank_model
     if _rerank_model is None:
-        from sentence_transformers import CrossEncoder
+        if MODEL_BACKEND == "onnx":
+            from api.onnx_models import MODELS_DIR, OnnxReranker
 
-        _rerank_model = CrossEncoder(RERANK_MODEL)
+            _rerank_model = OnnxReranker(MODELS_DIR / "reranker")
+        else:
+            from sentence_transformers import CrossEncoder
+
+            _rerank_model = CrossEncoder(RERANK_MODEL)
     return _rerank_model
 
 
