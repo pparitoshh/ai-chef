@@ -5,12 +5,18 @@ An AI cooking assistant that recommends dishes based on what you're craving —
 then walks you through the recipe, suggests similar dishes, and learns from
 your 👍/👎 feedback.
 
-Under the hood it's a RAG application: a 10k-recipe knowledge base in
-PostgreSQL + pgvector, hybrid retrieval (vector ⊕ full-text) with a
-cross-encoder re-ranker, and a Groq LLM that turns retrieved recipes into a
-friendly recommendation.
+Under the hood it's a RAG application: a 10k-recipe knowledge base, hybrid
+retrieval (vector ⊕ full-text) with a cross-encoder re-ranker, and a Groq LLM
+that turns retrieved recipes into a friendly recommendation. It runs on two
+interchangeable retrieval backends — **PostgreSQL + pgvector** for the full
+Docker Compose stack, and a **fully in-memory backend** (precomputed
+embeddings + TF-IDF, no database) for a standalone Streamlit Cloud deploy —
+see [Deployment](#deployment).
 
 ![AI Chef chat UI](docs/screenshots/streamlit.png)
+
+**Live demo:** https://ai-chef-24-7.streamlit.app/ (in-memory backend, no
+database — Streamlit Cloud + Groq only)
 
 ## Why
 
@@ -25,33 +31,37 @@ endless list.
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│ Streamlit UI (chat)                                            │
-│  free-text request  →  recipe cards + similar  →  👍/👎        │
+│ Streamlit UI                                                    │
+│  conversational 5-question flow (cuisine, dish type, diet,     │
+│  skill, optional extra details) → recipe cards (click to        │
+│  expand full ingredients/steps) → 👍/👎                         │
 └──────────────┬─────────────────────────────────┬───────────────┘
-               │ POST /recommend                  │ POST /feedback
+     SEARCH_BACKEND=api                SEARCH_BACKEND=memory
+     POST /recommend, /feedback        in-process, no HTTP hop
                ▼                                  ▼
-┌────────────────────────────────────────────────────────────────┐
-│ FastAPI                                                        │
-│  1. query rewrite + filter extraction (Groq, structured out)   │
-│  2. hybrid search: pgvector ⊕ full-text + filters,             │
-│     cross-encoder re-ranks top-20 → top-5                      │
-│     (embedder + re-ranker run on ONNX Runtime — no torch)      │
-│  3. build prompt → Groq LLM answer                             │
-│  4. inline LLM-as-judge relevance + token/cost tracking        │
-│  5. log conversation → Postgres                                │
-└──────────────┬─────────────────────────────────────────────────┘
+┌───────────────────────────┐      ┌───────────────────────────┐
+│ FastAPI (api/main.py)     │      │ api/rag_memory.py         │
+│  rewrite → hybrid search  │      │  rewrite → hybrid search  │
+│  (pgvector ⊕ FTS + rerank)│      │  (in-memory cosine ⊕      │
+│  → Groq answer → judge →  │      │  TF-IDF, RRF-fused)       │
+│  log to Postgres          │      │  → Groq answer            │
+└──────────────┬─────────────┘      └──────────────┬─────────────┘
+               ▼                                  ▼
+┌───────────────────────────┐      ┌───────────────────────────┐
+│ PostgreSQL + pgvector     │      │ data/recipes_10k.csv +    │
+│  recipes / conversations /│      │ precomputed .npy          │
+│  feedback                 │      │ embeddings (in-process)   │
+└──────────────┬─────────────┘      └───────────────────────────┘
                ▼
 ┌────────────────────────────────────────────────────────────────┐
-│ PostgreSQL + pgvector                                          │
-│  ├── recipes        (knowledge base: text + embedding + meta)  │
-│  ├── conversations  (question, answer, relevance, tokens, ms)  │
-│  └── feedback       (conversation_id, +1/-1)                   │
-└──────────────┬─────────────────────────────────────────────────┘
-               ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Grafana (auto-provisioned dashboard, 6 charts)                 │
+│ Grafana (auto-provisioned dashboard, 6 charts) — api backend    │
 └────────────────────────────────────────────────────────────────┘
 ```
+
+Both backends share the same Groq prompts, filter-extraction, and RRF-fusion
+logic — `api/rag_memory.py` / `api/memory_search.py` are a parallel
+implementation of `api/rag.py` / `api/search.py` against in-memory arrays
+instead of Postgres, not a fork of the retrieval algorithm.
 
 ## Tech stack
 
@@ -102,14 +112,21 @@ Then open:
 
 ## Usage
 
-**Chat UI** — describe what you want in one message:
+**Chat UI** — AI Chef asks 4 guided questions, plus an optional 5th free-text
+one:
 
-> *"I want a spicy indian chicken curry, something beginner-friendly"*
+1. 🌍 What cuisine are you craving? (Indian, Mexican, Italian, ...)
+2. 🍽️ What kind of dish? (carbonara pasta, butter chicken, tacos, a quick
+   30-min dinner, ...)
+3. 🥗 What protein do you eat? (vegan, vegetarian, chicken, everything, ...)
+4. 👨‍🍳 What's your cooking level? (beginner, intermediate, advanced)
+5. ✏️ Anything else? (optional — "extra spicy", "no onions", or skip)
 
-AI Chef extracts filters (`cuisine=indian, dish_type=curry, diet=non-veg,
-skill_level=beginner, protein=chicken`), retrieves matching recipes, and
-answers with a recommendation, why it fits, similar dishes, and recipe cards.
-Rate the answer with 👍/👎 — feedback lands in Grafana.
+AI Chef combines the answers into a query, extracts structured filters via
+Groq, retrieves matching recipes, and answers with a recommendation, why it
+fits, and clickable recipe cards — click a dish name to expand its full
+ingredients and steps inline. Rate the answer with 👍/👎 (logged to Grafana
+when running against the API backend). Type **reset** to start over.
 
 **API** — same flow over REST:
 
@@ -129,9 +146,34 @@ curl -X POST localhost:8000/feedback \
 |---|---|---|---|
 | `/recommend` | POST | `{question, k=1..10}` | answer, recipe cards, extracted filters, judge relevance, tokens, ms |
 | `/feedback` | POST | `{conversation_id, feedback: +1/-1}` | `{status: ok}` |
+| `/recipes/{recipe_id}` | GET | — | full recipe: ingredients, steps, calories |
 | `/health` | GET | — | `{status, recipes}` |
 
 ![FastAPI docs](docs/screenshots/api_docs.png)
+
+## Deployment
+
+The live demo (https://ai-chef-24-7.streamlit.app/) runs Streamlit Cloud
+**standalone** against the in-memory backend — no external database or API
+hosting required:
+
+- `SEARCH_BACKEND=memory` in Streamlit Cloud secrets makes `streamlit_app/app.py`
+  call `api/rag_memory.py` directly (in-process), instead of hitting a FastAPI
+  `/recommend` endpoint.
+- `api/memory_search.py` loads `data/recipes_10k.csv` + the precomputed
+  `data/recipes_10k_embeddings.npy` (committed to the repo) into memory once
+  per process, builds a `TfidfVectorizer` index for keyword search, and fuses
+  vector ⊕ keyword results with the same RRF logic as `api/search.py`.
+- The ONNX embedder is downloaded once from Hugging Face into a local cache
+  on first run (see `_download_embedder` in `api/memory_search.py`).
+- Secrets needed: `GROQ_API_KEY`, `SEARCH_BACKEND="memory"`.
+
+The original **PostgreSQL + pgvector** path (`api/search.py`, `api/rag.py`,
+the full Docker Compose stack, Grafana monitoring) is untouched and still the
+default (`SEARCH_BACKEND=api`) — it's the path with eval numbers, feedback
+logging, and monitoring, kept for a future proper cloud deploy (API host +
+managed Postgres). See [PLAN.md](PLAN.md) for the in-memory vs. pgvector
+tradeoff and next steps.
 
 ## Monitoring
 
@@ -184,23 +226,29 @@ ai-chef/
 ├── Dockerfile                  # API image (torch-free, ONNX Runtime)
 ├── Dockerfile.streamlit        # UI image (streamlit only, no ML deps)
 ├── api/
-│   ├── main.py                 # /recommend, /feedback, /health
-│   ├── rag.py                  # rewrite → search → prompt → Groq → judge
-│   ├── search.py               # text / vector / hybrid / hybrid+rerank
+│   ├── main.py                 # /recommend, /feedback, /recipes/{id}, /health
+│   ├── rag.py                  # rewrite → search → prompt → Groq → judge (pgvector)
+│   ├── search.py               # text / vector / hybrid / hybrid+rerank (pgvector)
+│   ├── rag_memory.py           # same RAG flow, in-memory retrieval (no DB)
+│   ├── memory_search.py        # in-memory hybrid search (cosine + TF-IDF, RRF)
 │   ├── onnx_models.py          # ONNX embedder + re-ranker (docker images)
 │   ├── db.py                   # conversation + feedback logging
 │   └── schemas.py              # Pydantic models
-├── streamlit_app/app.py        # chat UI + recipe cards + 👍/👎
+├── streamlit_app/
+│   ├── app.py                  # conversational UI + clickable recipe cards + 👍/👎
+│   └── requirements.txt        # standalone deps for Streamlit Cloud
 ├── pipeline/
 │   ├── prepare_data.py         # Food.com 231k → 10k sample + derived fields
 │   ├── ingest.py               # embed → pgvector
+│   ├── precompute_embeddings.py # embed → data/recipes_10k_embeddings.npy (in-memory backend)
 │   ├── generate_ground_truth.py
 │   ├── evaluate_retrieval.py   # HR / MRR across approaches
 │   └── evaluate_rag.py         # model × prompt, LLM-as-judge
 ├── grafana/                    # auto-provisioned datasource + dashboard
 ├── scripts/init_db.sql         # pgvector extension + tables + indexes
 ├── tests/test_search.py        # smoke tests (search + filters)
-└── data/recipes_10k.csv        # the knowledge base (committed)
+├── data/recipes_10k.csv        # the knowledge base (committed)
+└── data/recipes_10k_embeddings.npy  # precomputed embeddings (committed, in-memory backend)
 ```
 
 ## Development
@@ -233,6 +281,8 @@ See [.env.example](.env.example). Essentials: `GROQ_API_KEY` (required),
 
 ## Roadmap
 
-Done: data → ingestion → retrieval eval → RAG eval → API → UI → monitoring →
-docker → docs. Optional next: Prefect ingestion flow, cloud deploy
-(Vercel + Streamlit Cloud + Neon). See [PLAN.md](PLAN.md).
+Done: data → ingestion → retrieval eval → RAG eval → API → conversational UI
+→ clickable recipe detail → monitoring → docker → docs → standalone
+Streamlit Cloud deploy (in-memory backend). Next milestone: proper cloud
+deploy of the pgvector path (managed Postgres + hosted API), Prefect
+ingestion flow. See [PLAN.md](PLAN.md).

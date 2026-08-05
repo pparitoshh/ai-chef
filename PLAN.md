@@ -5,8 +5,10 @@ based on **cuisine**, **dish type**, and **culinary skill level**, then walks
 the user through the recipe. Built and maintained as a long-term personal
 project.
 
-> Status: **Planning** — this document is the single source of truth for scope
-> and architecture. Update it as decisions change.
+> Status: **Live** — core app (data, retrieval, RAG, API, conversational UI,
+> monitoring, Docker Compose) is built and evaluated; a standalone in-memory
+> deploy is live on Streamlit Cloud. This document is the single source of
+> truth for scope and architecture. Update it as decisions change.
 
 ---
 
@@ -51,7 +53,7 @@ Fully free-tier friendly. Only two hosted externals: **Groq** (LLM) and
 | Containerization | Docker Compose (api, streamlit, postgres, grafana) | One-command local run |
 | Ingestion | Python script → optional Prefect flow | Simple first, automate later |
 | Evaluation | Jupyter notebooks (Hit Rate, MRR, LLM-as-a-judge) | Data-driven retrieval/model choices |
-| Deployment | FastAPI → **Vercel**, Streamlit → Streamlit Cloud, DB → Neon free tier | Free hosting for the live demo |
+| Deployment | **Live now**: Streamlit Cloud standalone, in-memory backend (no DB). **Phase 11 target**: FastAPI on a persistent-process host (Render or similar — Vercel's serverless model can't hold a Postgres connection), managed Postgres (Neon/Supabase), Streamlit Cloud → hosted API | Free hosting for the live demo |
 | Package manager | `uv` | Fast, reproducible (`uv.lock`) |
 
 ---
@@ -185,15 +187,24 @@ ai-chef/
       8b vs 70b comparison; pick winner → **llama-3.1-8b-instant + detailed
       prompt** (RELEVANT 0.82 vs 0.72/0.57/0.52, 175 judgments)
 - [x] **Phase 5 — FastAPI**: `/recommend`, `/feedback`, `/health`; logging
-- [x] **Phase 6 — Streamlit**: conversational flow, recipe cards, similar
-      dishes, feedback buttons
+- [x] **Phase 6 — Streamlit**: conversational 5-question flow (cuisine, dish
+      type w/ examples, diet, skill, optional free-text), persisted Q&A
+      history, clickable recipe cards (expand full ingredients/steps via
+      `GET /recipes/{id}`), feedback buttons
 - [x] **Phase 7 — Monitoring**: inline judge, Grafana dashboard (6 charts),
       auto-provisioning
 - [x] **Phase 8 — Docker Compose**: all 4 services, one-command start
-- [ ] **Phase 9 — Docs**: full README (problem, architecture, setup, usage,
-      screenshots, evaluation summary)
-- [ ] **Phase 10 — Bonus (optional)**: Prefect ingestion flow; Vercel +
-      Streamlit Cloud + Neon deployment
+- [x] **Phase 9 — Docs**: full README (problem, architecture, setup, usage,
+      screenshots, evaluation summary, deployment)
+- [x] **Phase 10a — Standalone deploy (in-memory backend)**: Streamlit Cloud
+      + Groq only, no external DB/API hosting — see decisions log. Live:
+      https://ai-chef-24-7.streamlit.app/
+- [ ] **Phase 11 — Next milestone: pgvector cloud deploy**: host FastAPI
+      (Vercel attempt hit no-reachable-Postgres issue — needs a managed DB
+      + a host that supports persistent connections/long-lived processes,
+      e.g. Render) + managed Postgres (Neon/Supabase) + Streamlit Cloud
+      pointed at the hosted API (`SEARCH_BACKEND=api`); Prefect ingestion
+      flow
 
 ---
 
@@ -224,4 +235,7 @@ GROQ_JUDGE_MODEL=llama-3.3-70b-versatile
 | 2026-08-03 | Deployment | Vercel (API) — bonus phase only |
 | 2026-08-03 | Retrieval | **hybrid+rerank** wins (788 Groq questions, k=5): HR 0.208 / MRR 0.134 vs hybrid 0.184/0.108, text 0.156/0.092, vector 0.126/0.071; 83ms/query acceptable |
 | 2026-08-03 | Answer model | **llama-3.1-8b-instant + "detailed" prompt**: LLM-judge RELEVANT 0.82 (n=44) vs 70b-detailed 0.72, 70b-concise 0.57, 8b-concise 0.52; also faster (634ms) and cheaper. Prompt variant mattered more than model size |
-| — | Ingestion: script vs Prefect? | Start with script, decide at Phase 10 |
+| 2026-08-05 | Deployment: Vercel API | FastAPI deployed to Vercel but `/health` 500s — no publicly reachable Postgres from Vercel's serverless env (`POSTGRES_HOST` only resolves inside the local Docker network). Deprioritized in favor of the in-memory approach; left broken for now, to revisit in Phase 11 with a proper host (Render or similar) + managed Postgres |
+| 2026-08-05 | Deployment: in-memory backend | Standalone Streamlit Cloud deploy needs no external DB/API. Added `api/memory_search.py` (cosine similarity over precomputed embeddings + `TfidfVectorizer` keyword search, fused with the same RRF logic as `api/search.py`) and `api/rag_memory.py` (same Groq prompts/rewrite/judge as `api/rag.py`, reused not duplicated). Explicit constraint: the pgvector path (`api/search.py`, `api/rag.py`, Docker Compose stack) stays untouched — this is an additive parallel backend for "time being," not a replacement, kept for Phase 11's proper cloud deploy. Toggled via `SEARCH_BACKEND` env/secret (`api` default, `memory` opt-in) |
+| 2026-08-05 | Streamlit Cloud runtime fixes | `streamlit run` only adds the script's own dir to `sys.path` → added explicit repo-root insert for `from api import ...` to resolve. Streamlit's ASGI server needs `starlette<0.48` (newer starlette broke `GZipResponder` compat) and `psycopg2-binary` (transitively imported via `api.rag_memory → api.rag → api.search`, even though the memory backend never opens a DB connection) |
+| — | Ingestion: script vs Prefect? | Start with script, decide at Phase 11 |
