@@ -8,10 +8,15 @@ venv/
 # Env
 .env
 
-# Data (downloaded via pipeline); keep the final sample in git
-# NOTE: `data/*` (not `data/`) so the negation below can re-include the file
+# Data (downloaded via pipeline); keep the final sample + its precomputed
+# embeddings (in-memory search backend) in git
+# NOTE: `data/*` (not `data/`) so the negation below can re-include the files
 data/*
 !data/recipes_10k.csv
+!data/recipes_10k_embeddings.npy
+
+# ONNX models downloaded at runtime by the in-memory search backend
+models/
 
 # uv / build
 dist/

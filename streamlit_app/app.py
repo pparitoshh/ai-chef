@@ -10,6 +10,7 @@ Run:  uv run streamlit run streamlit_app/app.py
 
 import os
 import re
+import uuid
 
 import requests
 import streamlit as st
@@ -18,6 +19,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://localhost:8000"))
+# "api" (default, talks to FastAPI + Postgres) or "memory" (in-process search,
+# no database needed — used for the Streamlit Cloud deployment for now).
+SEARCH_BACKEND = st.secrets.get("SEARCH_BACKEND", os.getenv("SEARCH_BACKEND", "api"))
+
+if SEARCH_BACKEND == "memory":
+    from api import memory_search, rag_memory
 
 st.set_page_config(page_title="AI Chef", page_icon="🍳")
 st.title("🍳 AI Chef")
@@ -80,9 +87,13 @@ QUESTIONS = [
 
 def fetch_recipe_detail(recipe_id: str):
     if recipe_id not in st.session_state.recipe_details:
-        resp = requests.get(f"{API_URL}/recipes/{recipe_id}", timeout=30)
-        resp.raise_for_status()
-        st.session_state.recipe_details[recipe_id] = resp.json()
+        if SEARCH_BACKEND == "memory":
+            detail = memory_search.get_recipe_detail(recipe_id)
+        else:
+            resp = requests.get(f"{API_URL}/recipes/{recipe_id}", timeout=30)
+            resp.raise_for_status()
+            detail = resp.json()
+        st.session_state.recipe_details[recipe_id] = detail
     return st.session_state.recipe_details[recipe_id]
 
 
@@ -166,13 +177,15 @@ for msg in st.session_state.messages:
             if conv_id and conv_id not in st.session_state.feedback_given:
                 c1, c2, _ = st.columns([1, 1, 8])
                 if c1.button("👍 Helpful", key=f"up_{conv_id}"):
-                    requests.post(f"{API_URL}/feedback",
-                                  json={"conversation_id": conv_id, "feedback": 1})
+                    if SEARCH_BACKEND != "memory":
+                        requests.post(f"{API_URL}/feedback",
+                                      json={"conversation_id": conv_id, "feedback": 1})
                     st.session_state.feedback_given.add(conv_id)
                     st.rerun()
                 if c2.button("👎 Not helpful", key=f"down_{conv_id}"):
-                    requests.post(f"{API_URL}/feedback",
-                                  json={"conversation_id": conv_id, "feedback": -1})
+                    if SEARCH_BACKEND != "memory":
+                        requests.post(f"{API_URL}/feedback",
+                                      json={"conversation_id": conv_id, "feedback": -1})
                     st.session_state.feedback_given.add(conv_id)
                     st.rerun()
             elif conv_id in st.session_state.feedback_given:
@@ -214,13 +227,25 @@ elif st.session_state.current_step == len(QUESTIONS):
                 parts.append(extra)
             query = " ".join(p for p in parts if p).strip()
 
-            resp = requests.post(
-                f"{API_URL}/recommend",
-                json={"question": query},
-                timeout=120
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            if SEARCH_BACKEND == "memory":
+                rewritten = rag_memory.rewrite_query(query)
+                out = rag_memory.generate_answer(query, filters=rewritten["filters"])
+                if not out["recipes"] and rewritten["filters"]:
+                    out = rag_memory.generate_answer(query)
+                data = {
+                    "conversation_id": str(uuid.uuid4()),
+                    "answer": out["answer"],
+                    "recipes": [r.__dict__ for r in out["recipes"]],
+                    "filters": rewritten["filters"],
+                }
+            else:
+                resp = requests.post(
+                    f"{API_URL}/recommend",
+                    json={"question": query},
+                    timeout=120
+                )
+                resp.raise_for_status()
+                data = resp.json()
 
             # Display recommendation
             st.markdown(data["answer"])
@@ -238,7 +263,7 @@ elif st.session_state.current_step == len(QUESTIONS):
             st.session_state.current_step = len(QUESTIONS) + 1
             st.rerun()
 
-        except requests.RequestException as e:
+        except Exception as e:
             st.error(f"❌ API error: {e}")
             if st.button("🔄 Try again"):
                 st.session_state.messages = st.session_state.messages[:-1]
