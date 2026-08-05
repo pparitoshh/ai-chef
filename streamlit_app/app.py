@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://localhost:8000"))
 
 st.set_page_config(page_title="AI Chef", page_icon="🍳")
 st.title("🍳 AI Chef")
