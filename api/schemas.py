@@ -18,6 +18,12 @@ class RecipeOut(BaseModel):
     minutes: int | None
 
 
+class RecipeDetail(RecipeOut):
+    ingredients: list[str]
+    steps: list[str]
+    calories: float | None
+
+
 class RecommendResponse(BaseModel):
     conversation_id: str
     answer: str

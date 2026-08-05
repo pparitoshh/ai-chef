@@ -11,8 +11,8 @@ import time
 from fastapi import FastAPI, HTTPException
 
 from api import db, rag
-from api.schemas import (FeedbackRequest, FeedbackResponse, RecipeOut,
-                         RecommendRequest, RecommendResponse)
+from api.schemas import (FeedbackRequest, FeedbackResponse, RecipeDetail,
+                         RecipeOut, RecommendRequest, RecommendResponse)
 from api.search import get_connection
 
 app = FastAPI(title="AI Chef", version="0.1.0")
@@ -57,6 +57,24 @@ def feedback(req: FeedbackRequest):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"unknown conversation_id: {e}")
     return FeedbackResponse()
+
+
+@app.get("/recipes/{recipe_id}", response_model=RecipeDetail)
+def get_recipe(recipe_id: str):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, name, cuisine, dish_type, diet, skill_level, "
+            "minutes, calories, ingredients, steps FROM recipes WHERE id = %s",
+            (recipe_id,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="recipe not found")
+    return RecipeDetail(
+        id=row[0], name=row[1], cuisine=row[2], dish_type=row[3],
+        diet=row[4], skill_level=row[5], minutes=row[6], calories=row[7],
+        ingredients=row[8], steps=row[9],
+    )
 
 
 @app.get("/health")
