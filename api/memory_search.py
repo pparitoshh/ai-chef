@@ -17,8 +17,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DATA_PATH = os.getenv("DATA_PATH", "data/recipes_10k.csv")
-EMBEDDINGS_PATH = os.getenv("EMBEDDINGS_PATH", "data/recipes_10k_embeddings.npy")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+DATA_PATH = os.getenv("DATA_PATH", str(_REPO_ROOT / "data" / "recipes_10k.csv"))
+EMBEDDINGS_PATH = os.getenv(
+    "EMBEDDINGS_PATH", str(_REPO_ROOT / "data" / "recipes_10k_embeddings.npy"))
+# api.onnx_models reads MODELS_DIR at import time — set a cwd-independent
+# default before it's imported (get_embedder does the import lazily).
+os.environ.setdefault("MODELS_DIR", str(_REPO_ROOT / "models"))
 CANDIDATES = 20
 RRF_K = 60
 

@@ -10,13 +10,21 @@ Run:  uv run streamlit run streamlit_app/app.py
 
 import os
 import re
+import sys
 import uuid
+from pathlib import Path
 
 import requests
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# streamlit run only puts this file's own directory on sys.path — add the
+# repo root too so `from api import ...` resolves (e.g. on Streamlit Cloud).
+_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://localhost:8000"))
 # "api" (default, talks to FastAPI + Postgres) or "memory" (in-process search,
