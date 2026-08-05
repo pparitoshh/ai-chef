@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai_chef_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_chef}
+      POSTGRES_USER: ${POSTGRES_USER:-chef}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chef}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chef} -d ${POSTGRES_DB:-ai_chef}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_chef_api
+    ports:
+      - "8000:8000"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      HF_TOKEN: ${HF_TOKEN:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-ai_chef}
+      POSTGRES_USER: ${POSTGRES_USER:-chef}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chef}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: ai_chef_streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: ai_chef_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      # Grafana 12 deprecated anonymous Admin — anonymous access is Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-ai_chef}
+      POSTGRES_USER: ${POSTGRES_USER:-chef}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chef}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    # pre-existing volume from the phase-2 ingestion — keep the data
+    name: ai_chef_postgres_data
+    external: true

@@ -8,8 +8,10 @@ venv/
 # Env
 .env
 
-# Data (downloaded via pipeline)
-data/
+# Data (downloaded via pipeline); keep the final sample in git
+# NOTE: `data/*` (not `data/`) so the negation below can re-include the file
+data/*
+!data/recipes_10k.csv
 
 # uv / build
 dist/
