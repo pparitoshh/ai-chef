@@ -112,7 +112,7 @@ cp .env.example .env          # add your GROQ_API_KEY
 docker volume create ai_chef_postgres_data   # named volume for the recipe DB
 docker compose up -d --build                 # postgres + api + streamlit + grafana
 
-# one-time: embed 10k recipes into pgvector (runs on the host, ~2-5 min on CPU)
+# one-time: embed 10k recipes into pgvector (Prefect flow, runs on the host, ~2-5 min on CPU)
 uv sync
 uv run python -m pipeline.ingest
 ```
@@ -260,7 +260,7 @@ ai-chef/
 │   └── requirements.txt        # standalone deps for Streamlit Cloud
 ├── pipeline/
 │   ├── prepare_data.py         # Food.com 231k → 10k sample + derived fields
-│   ├── ingest.py               # embed → pgvector
+│   ├── ingest.py               # Prefect flow: load → embed → pgvector
 │   ├── precompute_embeddings.py # embed → data/recipes_10k_embeddings.npy (in-memory backend)
 │   ├── generate_ground_truth.py
 │   ├── evaluate_retrieval.py   # HR / MRR across approaches
@@ -302,8 +302,8 @@ See [.env.example](.env.example). Essentials: `GROQ_API_KEY` (required),
 
 ## Roadmap
 
-Done: data → ingestion → retrieval eval → RAG eval → API → conversational UI
-→ clickable recipe detail → monitoring → docker → docs → standalone
-Streamlit Cloud deploy (in-memory backend). Next milestone: proper cloud
-deploy of the pgvector path (managed Postgres + hosted API), Prefect
-ingestion flow. See [PLAN.md](PLAN.md).
+Done: data → ingestion (Prefect flow) → retrieval eval → RAG eval → API →
+conversational UI → clickable recipe detail → monitoring → docker → docs →
+standalone Streamlit Cloud deploy (in-memory backend). Next milestone: proper
+cloud deploy of the pgvector path (managed Postgres + hosted API). See
+[PLAN.md](PLAN.md).

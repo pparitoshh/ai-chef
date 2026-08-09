@@ -15,6 +15,7 @@ from time import time
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from prefect import flow, task
 from sentence_transformers import SentenceTransformer
 
 load_dotenv()
@@ -61,12 +62,16 @@ def build_embedding_text(row):
     return f"{row['name']} | {row['cuisine']} | {row['dish_type']} | {ingredients}"
 
 
-def main():
+@task(retries=2, retry_delay_seconds=5)
+def load_data() -> pd.DataFrame:
     df = pd.read_csv(DATA_PATH)
     print(f"Loaded {len(df):,} recipes from {DATA_PATH}")
+    return df
 
+
+@task
+def embed_recipes(df: pd.DataFrame):
     texts = df.apply(build_embedding_text, axis=1).tolist()
-
     print(f"Embedding with {EMBEDDING_MODEL} ...")
     model = SentenceTransformer(EMBEDDING_MODEL)
     t0 = time()
@@ -78,7 +83,11 @@ def main():
     )
     print(f"  embedded {len(embeddings):,} texts in {time() - t0:.1f}s "
           f"(dim={embeddings.shape[1]})")
+    return embeddings
 
+
+@task(retries=2, retry_delay_seconds=5)
+def load_to_postgres(df: pd.DataFrame, embeddings) -> int:
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -101,10 +110,19 @@ def main():
 
         with conn.cursor() as cur:
             cur.execute("SELECT count(*) FROM recipes")
-            print(f"recipes table now has {cur.fetchone()[0]:,} rows")
+            count = cur.fetchone()[0]
+            print(f"recipes table now has {count:,} rows")
+            return count
     finally:
         conn.close()
 
 
+@flow(name="ingest-recipes")
+def ingest_flow():
+    df = load_data()
+    embeddings = embed_recipes(df)
+    load_to_postgres(df, embeddings)
+
+
 if __name__ == "__main__":
-    main()
+    ingest_flow()
