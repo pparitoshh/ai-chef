@@ -1,6 +1,7 @@
 # 🍳 AI Chef
 
 **🔗 Live demo: [ai-chef-24-7.streamlit.app](https://ai-chef-24-7.streamlit.app/)**
+**🎥 [Watch a walkthrough video](docs/demo/streamlit-demo.webm)**
 
 An AI cooking assistant that recommends dishes based on what you're craving —
 **cuisine**, **dish type**, **diet/protein**, and your **cooking skill level** —
