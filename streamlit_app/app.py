@@ -117,6 +117,8 @@ def recipe_card(r: dict, key_prefix: str):
         else:
             st.session_state.expanded_recipes.add(recipe_id)
         st.rerun()
+    if recipe_id not in st.session_state.expanded_recipes:
+        st.caption("👉 Click the dish name above to see full ingredients and steps")
 
     if recipe_id in st.session_state.expanded_recipes:
         try:
