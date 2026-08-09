@@ -29,6 +29,24 @@ exactly that in one sentence — *"quick vegetarian mexican dinner, I'm a
 beginner"* — and returns a small, well-matched set of recipes instead of an
 endless list.
 
+## Dataset
+
+The knowledge base is built from **Food.com Recipes** (~231k recipes),
+originally published on Kaggle as
+[`shuyangli94/food-com-recipes-and-user-interactions`](https://www.kaggle.com/datasets/shuyangli94/food-com-recipes-and-user-interactions)
+(`RAW_recipes.csv`). Since Kaggle downloads require authentication, this
+project pulls the same file from a public Hugging Face mirror,
+[`Cassiedu66/ai-blessed_raw_recipes`](https://huggingface.co/datasets/Cassiedu66/ai-blessed_raw_recipes).
+
+Each recipe has a name, ingredients, steps, cook time, calories, and
+free-text tags. `pipeline/prepare_data.py` samples **10k recipes** covering
+several cuisines from the 231k raw set and derives structured fields
+(`cuisine`, `dish_type`, `skill_level`, `proteins`) from the tags and
+ingredients. The resulting sample, `data/recipes_10k.csv`, plus its
+precomputed embeddings (`data/recipes_10k_embeddings.npy`), are committed to
+the repo — no dataset download is needed to run the project. See
+[PLAN.md](PLAN.md#4-dataset) for the full source/selection rationale.
+
 ## Architecture
 
 ```
