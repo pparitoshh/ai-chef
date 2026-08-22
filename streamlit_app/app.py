@@ -105,6 +105,24 @@ def fetch_recipe_detail(recipe_id: str):
     return st.session_state.recipe_details[recipe_id]
 
 
+def rank_by_mention(recipes: list[dict], answer: str) -> list[dict]:
+    """Order cards to match the answer: the dish it leads with comes first.
+
+    The answer names its best pick before the alternatives, so first-mention
+    position in the text is the ranking. Retrieval score already ordered these
+    by relevance, which is not the same as what the LLM actually recommended.
+    Anything the answer never names keeps its original relative order at the end.
+    """
+    haystack = answer.lower()
+
+    def sort_key(item):
+        i, r = item
+        pos = haystack.find(r["name"].lower())
+        return (1, i) if pos < 0 else (0, pos)
+
+    return [r for _, r in sorted(enumerate(recipes), key=sort_key)]
+
+
 def recipe_card(r: dict, key_prefix: str):
     recipe_id = r["id"]
     st.markdown(
@@ -169,18 +187,18 @@ def add_user_message(content: str):
 # Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
+        data = msg["data"] if msg["role"] == "assistant" else None
+
         st.markdown(msg["content"])
 
-        # Show recommendation data if present
-        if msg["role"] == "assistant" and msg.get("data"):
-            data = msg["data"]
+        if data:
             if data.get("filters"):
                 st.caption("Filters: " + ", ".join(
                     f"{k}={v}" for k, v in data["filters"].items()))
 
             conv_id = data.get("conversation_id")
             with st.expander("📋 Recommended dishes", expanded=True):
-                for r in data.get("recipes", []):
+                for r in rank_by_mention(data.get("recipes", []), msg["content"]):
                     recipe_card(r, key_prefix=conv_id)
 
             # Feedback buttons
