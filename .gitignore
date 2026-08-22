@@ -26,3 +26,6 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Streamlit local secrets
+.streamlit/secrets.toml

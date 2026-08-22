@@ -88,7 +88,7 @@ instead of Postgres, not a fork of the retrieval algorithm.
 
 | Layer | Choice |
 |---|---|
-| LLM | Groq — `llama-3.1-8b-instant` (answers), `llama-3.3-70b-versatile` (judge) |
+| LLM | Groq — `openai/gpt-oss-20b` (answers), `openai/gpt-oss-120b` (judge) |
 | Embeddings | `all-MiniLM-L6-v2` (384-dim) — ONNX Runtime in the API image |
 | Re-ranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` — ONNX Runtime |
 | Knowledge base | PostgreSQL 16 + pgvector (vector + FTS + app data in one) |
@@ -237,6 +237,11 @@ Hit Rate / MRR @ k=5 (`uv run python -m pipeline.evaluate_retrieval`):
 Winner: **hybrid+rerank retrieval** and **llama-3.1-8b + detailed prompt** —
 the smaller model with the better prompt beat the 70b, and it's faster and
 cheaper. Prompt variant mattered more than model size.
+
+> Groq has since deprecated the `llama-3.1-8b-instant` / `llama-3.3-70b-versatile`
+> models used in this eval; the app now runs on `openai/gpt-oss-20b` /
+> `openai/gpt-oss-120b` (see [Tech stack](#tech-stack)). The eval hasn't been
+> re-run against the new models, so treat the numbers above as historical.
 
 ## Repository layout
 

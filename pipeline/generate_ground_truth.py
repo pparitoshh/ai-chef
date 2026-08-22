@@ -24,9 +24,9 @@ load_dotenv()
 
 DATA_PATH = os.getenv("DATA_PATH", "data/recipes_10k.csv")
 OUT_PATH = Path("data/ground_truth.csv")
-MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 SEED = 42
-# free tier ~30 RPM for llama-3.1-8b-instant — pace ourselves under that
+# free tier ~30 RPM for openai/gpt-oss-20b — pace ourselves under that
 MIN_INTERVAL_S = 2.2
 
 PROMPT = """You are simulating a hungry user of a recipe recommendation app.

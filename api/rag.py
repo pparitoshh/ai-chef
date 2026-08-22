@@ -14,8 +14,8 @@ from api.search import hybrid_rerank_search
 
 load_dotenv()
 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-GROQ_JUDGE_MODEL = os.getenv("GROQ_JUDGE_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_JUDGE_MODEL = os.getenv("GROQ_JUDGE_MODEL", "openai/gpt-oss-120b")
 
 _client = None
 
@@ -77,7 +77,7 @@ def rewrite_query(user_text: str) -> dict:
             user_text=user_text, cuisines=CUISINES, dish_types=DISH_TYPES)}],
         response_format={"type": "json_object"},
         temperature=0,
-        max_tokens=200,
+        max_tokens=1024,
     )
     data = json.loads(resp.choices[0].message.content)
     filters = {k: v for k in FILTER_KEYS
